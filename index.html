@@ -1,210 +1,254 @@
-
 <!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>Food Delivery — Prototype Pattern (Reorder)</title>
+  <title>Delivery Restaurants in Varansai</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
-    :root { font-family: system-ui, Arial; color-scheme: light dark; }
-    body { margin: 24px; }
-    h1 { margin-bottom: 8px; }
-    .grid { display: grid; gap: 16px; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); }
-    .card { border: 1px solid #ddd; border-radius: 12px; padding: 16px; box-shadow: 0 6px 14px rgba(0,0,0,0.06); background: #fff; }
-    .row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; align-items: center; }
-    button { padding: 8px 12px; border-radius: 8px; border: 1px solid #ccc; cursor: pointer; background: #f8f8f8; }
-    .orders { margin-top: 20px; }
-    .pill { font-size: 12px; border-radius: 999px; padding: 2px 8px; border: 1px solid #ddd; }
-    pre { background: #f7f7f8; padding: 8px; border-radius: 8px; max-height: 180px; overflow: auto; }
-    .mutator { display: flex; gap: 8px; align-items: center; margin-top: 6px; }
-    input[type="number"] { width: 72px; padding: 6px 8px; border-radius: 6px; border: 1px solid #ccc; }
-    small { color: #666; }
+    :root{
+      --bg:#ffffff; --text:#1a1a1a; --muted:#6b7280; --border:#e5e7eb;
+      --chip:#f4f5f7; --chipText:#111827; --brand:#ff2e63; --accent:#111827;
+      --card:#fff; --shadow:0 6px 18px rgba(0,0,0,.06);
+      --blue:#2e78ff; --green:#1aaa55; --tab:#f6f7f9;
+      --radius:16px; --radius-sm:12px;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0; font-family:Inter,system-ui,Segoe UI,Arial,sans-serif;
+      background:var(--bg); color:var(--text);
+    }
+    .container{max-width:1100px; margin:0 auto; padding:24px 20px 60px}
+    header{display:flex; align-items:center; gap:14px; padding:10px 0}
+    .logo{display:flex; align-items:center; gap:10px; font-weight:700}
+    .logo img{width:34px; height:34px}
+    .tabs{display:flex; gap:10px; margin-left:10px}
+    .tab{
+      display:flex; align-items:center; gap:8px; padding:10px 14px;
+      background:var(--tab); border:1px solid var(--border);
+      border-radius:999px; cursor:pointer; user-select:none; font-weight:600;
+      transition:all .15s ease;
+    }
+    .tab.active{background:#fff; border-color:#d1d5db; box-shadow:var(--shadow)}
+    .spacer{flex:1}
+    /* chips / filters */
+    .filters{display:flex; gap:10px; margin-top:18px; flex-wrap:wrap}
+    .chip{
+      display:inline-flex; align-items:center; gap:8px; padding:8px 12px;
+      background:var(--chip); color:var(--chipText);
+      border:1px solid var(--border); border-radius:999px; font-weight:500;
+    }
+    /* heading */
+    h1{font-size:28px; margin:26px 0 16px}
+    h1 .city{font-weight:800}
+    /* grid */
+    .grid{
+      display:grid; gap:20px;
+      grid-template-columns:repeat(3, minmax(0, 1fr));
+    }
+    @media (max-width:1024px){ .grid{grid-template-columns:repeat(2,1fr);} }
+    @media (max-width:640px){ .grid{grid-template-columns:1fr;} }
+
+    .card{
+      background:var(--card); border:1px solid var(--border);
+      border-radius:20px; overflow:hidden; box-shadow:var(--shadow);
+      transition:transform .15s ease, box-shadow .15s ease;
+    }
+    .card:hover{transform:translateY(-2px); box-shadow:0 10px 24px rgba(0,0,0,.08)}
+    .thumb{
+      position:relative; aspect-ratio:16/11; overflow:hidden; background:#f2f3f5;
+    }
+    .thumb img{
+      width:100%; height:100%; object-fit:cover; display:block; transition:transform .3s ease;
+    }
+    .card:hover .thumb img{transform:scale(1.03)}
+    .offer{
+      position:absolute; left:10px; bottom:10px; background:var(--blue); color:#fff;
+      padding:6px 10px; font-weight:700; font-size:12px; border-radius:8px;
+    }
+    .body{padding:12px 14px 14px}
+    .row{display:flex; justify-content:space-between; align-items:center; gap:10px}
+    .title{font-weight:700; font-size:16px; margin:4px 0}
+    .rating{
+      display:inline-flex; align-items:center; gap:6px; background:#e8f7ee; color:#0f7c3a;
+      border:1px solid #bde6cd; padding:4px 8px; border-radius:8px; font-weight:700; font-size:12px;
+    }
+    .muted{color:var(--muted); font-size:13px; margin-top:4px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+    .meta{display:flex; justify-content:space-between; align-items:center; margin-top:10px; color:#374151; font-weight:600; font-size:13px}
+    .time{color:#6b7280; font-weight:600}
+    /* tiny icons */
+    .ic{width:18px;height:18px;display:inline-block;vertical-align:-3px;opacity:.9}
   </style>
 </head>
 <body>
-  <h1>Prototype Pattern — Reorder an Existing Food Order</h1>
-  <p><small>Click “Reorder” to <b>clone</b> an existing order. Edit the clone; the original remains unchanged.</small></p>
+  <div class="container">
+    <!-- Top bar -->
+    <header>
+      <div class="logo">
+        <img alt="logo" src="https://cdn-icons-png.flaticon.com/512/684/684908.png">
+        <span>Zomato-ish</span>
+      </div>
+      <nav class="tabs" id="tabs">
+        <div class="tab active" data-tab="delivery">
+          <svg class="ic" viewBox="0 0 24 24" fill="none"><path d="M4 17h16M5 17a3 3 0 1 0 6 0M13 17a3 3 0 1 0 6 0M13 17V6h3l3 5v6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Delivery
+        </div>
+        <div class="tab" data-tab="dining">
+          <svg class="ic" viewBox="0 0 24 24" fill="none"><path d="M8 3v9m8-9v9M3 12h18M6 21v-9m12 9v-9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+          Dining Out
+        </div>
+        <div class="tab" data-tab="nightlife">
+          <svg class="ic" viewBox="0 0 24 24" fill="none"><path d="M12 3v18m6-12a6 6 0 1 1-12 0" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+          Nightlife
+        </div>
+      </nav>
+      <div class="spacer"></div>
+    </header>
 
-  <div class="orders">
-    <h2>Orders</h2>
-    <div id="orders" class="grid"></div>
+    <!-- Filters -->
+    <div class="filters">
+      <span class="chip">
+        <svg class="ic" viewBox="0 0 24 24" fill="none"><path d="M3 6h18M6 12h12M9 18h6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        Filters
+      </span>
+      <span class="chip">
+        Rating: 4.0+
+      </span>
+      <span class="chip">Pure Veg</span>
+    </div>
+
+    <!-- Title -->
+    <h1>Delivery Restaurants in <span class="city">Varansai</span></h1>
+
+    <!-- Grid -->
+    <section class="grid" id="grid">
+      <!-- Card 1 -->
+      <article class="card">
+        <div class="thumb">
+          <img src="https://images.unsplash.com/photo-1544025162-d76694265947?q=80&w=1600&auto=format&fit=crop" alt="Al Zameer">
+          <span class="offer">40% OFF</span>
+        </div>
+        <div class="body">
+          <div class="row">
+            <div class="title">Al Zameer</div>
+            <div class="rating">4.1★</div>
+          </div>
+          <div class="muted">North Indian, Mughlai</div>
+          <div class="meta">
+            <span>₹150 for one</span>
+            <span class="time">26 mins</span>
+          </div>
+        </div>
+      </article>
+
+      <!-- Card 2 -->
+      <article class="card">
+        <div class="thumb">
+          <img src="https://images.unsplash.com/photo-1625944525785-3dc7f2ee9123?q=80&w=1600&auto=format&fit=crop" alt="Bhaghat Halwai">
+          <span class="offer">30% OFF</span>
+        </div>
+        <div class="body">
+          <div class="row">
+            <div class="title">Bhaghat Halwai</div>
+            <div class="rating">4.3★</div>
+          </div>
+          <div class="muted">Street Food, Fast Food, Sweets</div>
+          <div class="meta">
+            <span>₹100 for one</span>
+            <span class="time">35 mins</span>
+          </div>
+        </div>
+      </article>
+
+      <!-- Card 3 -->
+      <article class="card">
+        <div class="thumb">
+          <img src="https://images.unsplash.com/photo-1555396273-367ea4eb4db5?q=80&w=1600&auto=format&fit=crop" alt="Bhawna Sweets">
+          <span class="offer">45% OFF</span>
+        </div>
+        <div class="body">
+          <div class="row">
+            <div class="title">Bhawna Sweets</div>
+            <div class="rating">4.5★</div>
+          </div>
+          <div class="muted">Mithai, Desserts, Bakery</div>
+          <div class="meta">
+            <span>₹300 for one</span>
+            <span class="time">5 mins</span>
+          </div>
+        </div>
+      </article>
+
+      <!-- Card 4 -->
+      <article class="card">
+        <div class="thumb">
+          <img src="https://images.unsplash.com/photo-1604908554063-f4f6df09c2cc?q=80&w=1600&auto=format&fit=crop" alt="Bombay Snacks">
+          <span class="offer">20% OFF</span>
+        </div>
+        <div class="body">
+          <div class="row">
+            <div class="title">Bombay Snacks</div>
+            <div class="rating">4.2★</div>
+          </div>
+          <div class="muted">Snacks, Chaat</div>
+          <div class="meta">
+            <span>₹120 for one</span>
+            <span class="time">18 mins</span>
+          </div>
+        </div>
+      </article>
+
+      <!-- Card 5 -->
+      <article class="card">
+        <div class="thumb">
+          <img src="https://images.unsplash.com/photo-1550547660-d9450f859349?q=80&w=1600&auto=format&fit=crop" alt="Thali House">
+          <span class="offer">35% OFF</span>
+        </div>
+        <div class="body">
+          <div class="row">
+            <div class="title">Thali House</div>
+            <div class="rating">4.4★</div>
+          </div>
+          <div class="muted">Gujarati, Rajasthani</div>
+          <div class="meta">
+            <span>₹220 for one</span>
+            <span class="time">32 mins</span>
+          </div>
+        </div>
+      </article>
+
+      <!-- Card 6 -->
+      <article class="card">
+        <div class="thumb">
+          <img src="https://images.unsplash.com/photo-1600628421060-6397a3d94d8b?q=80&w=1600&auto=format&fit=crop" alt="Dessert Den">
+          <span class="offer">25% OFF</span>
+        </div>
+        <div class="body">
+          <div class="row">
+            <div class="title">Dessert Den</div>
+            <div class="rating">4.6★</div>
+          </div>
+          <div class="muted">Cakes, Ice Cream</div>
+          <div class="meta">
+            <span>₹180 for one</span>
+            <span class="time">22 mins</span>
+          </div>
+        </div>
+      </article>
+    </section>
   </div>
 
   <script>
-    // --- 1) Deep clone utility (Prototype backbone)
-    function deepClone(obj) {
-      // Prefer structuredClone when available (preserves Dates, Maps, Sets)
-      if (typeof structuredClone === 'function') return structuredClone(obj);
-      return JSON.parse(JSON.stringify(obj)); // simple fallback
-    }
-
-    // --- 2) Order model with a clone method that resets appropriate fields
-    class FoodOrder {
-      constructor(data) { Object.assign(this, data); }
-
-      cloneForReorder(overrides = {}) {
-        const copy = new FoodOrder(deepClone(this));
-        copy.id = genId('ORD');                       // new identity
-        copy.status = 'PLACED';                       // reset lifecycle
-        copy.placedAt = new Date().toISOString();     // new timestamp
-        copy.driver = null;                           // clear assignment
-        copy.tracking = { etaMins: null, updates: [] };
-        // keep items, address, and payment by default (reorder convenience)
-        Object.assign(copy, overrides);               // allow tweaks at creation
-        return copy;
-      }
-    }
-
-    function genId(prefix) {
-      // Safe, non-crypto fallback id
-      const rnd = Math.random().toString(36).slice(2, 8).toUpperCase();
-      return `${prefix}-${Date.now().toString().slice(-6)}-${rnd}`;
-    }
-
-    // --- 3) Seed data (pretend these came from past orders)
-    const orders = [
-      new FoodOrder({
-        id: 'ORD-101',
-        userId: 'U1',
-        items: [
-          { id: 'M1', name: 'Paneer Tikka', qty: 1, price: 249 },
-          { id: 'M2', name: 'Butter Naan', qty: 2, price: 49 }
-        ],
-        address: { line1: '12 MG Road', city: 'Hyderabad', landmark: 'Metro Gate 3' },
-        payment: { method: 'UPI', last4: '1298' },
-        placedAt: '2025-11-08T12:15:00Z',
-        status: 'DELIVERED',
-        driver: { id: 'D7', name: 'Ravi' },
-        tracking: { etaMins: 0, updates: ['Delivered'] },
-        notes: 'Extra spicy'
-      }),
-      new FoodOrder({
-        id: 'ORD-102',
-        userId: 'U1',
-        items: [
-          { id: 'M9', name: 'Veg Biryani', qty: 1, price: 199 }
-        ],
-        address: { line1: '12 MG Road', city: 'Hyderabad', landmark: 'Metro Gate 3' },
-        payment: { method: 'CARD', last4: '5512' },
-        placedAt: '2025-11-09T19:45:12Z',
-        status: 'DELIVERED',
-        driver: { id: 'D3', name: 'Sanjay' },
-        tracking: { etaMins: 0, updates: ['Delivered'] },
-        notes: ''
-      })
-    ];
-
-    // --- 4) UI rendering
-    const $orders = document.getElementById('orders');
-
-    function currency(n) { return '₹' + n.toFixed(2); }
-    function total(order) {
-      return order.items.reduce((s, i) => s + i.qty * i.price, 0);
-    }
-
-    function render() {
-      $orders.innerHTML = '';
-      orders.forEach((order, idx) => {
-        const card = document.createElement('div');
-        card.className = 'card';
-
-        const itemsList = order.items.map(i => `${i.name} × ${i.qty}`).join(', ');
-        const statusPill = `<span class="pill">${order.status}</span>`;
-        const totalAmt = currency(total(order));
-
-        card.innerHTML = `
-          <h3>Order <code>${order.id}</code> ${statusPill}</h3>
-          <div><b>Items:</b> ${itemsList}</div>
-          <div><b>Address:</b> ${order.address.line1}, ${order.address.city}</div>
-          <div><b>Payment:</b> ${order.payment.method}${order.payment.last4 ? ' ••••'+order.payment.last4 : ''}</div>
-          <div><b>Total:</b> ${totalAmt}</div>
-          <div><b>Placed:</b> <small>${new Date(order.placedAt).toLocaleString()}</small></div>
-          <div class="row">
-            <button class="reorder">Reorder (Clone)</button>
-            <button class="mutate">Mutate Clone: +1 Qty First Item</button>
-            <button class="inspect">Inspect JSON</button>
-          </div>
-          <div class="mutator">
-            <label>Clone note: <input type="text" placeholder="e.g., Less oil" class="note" /></label>
-            <label>Qty for first item: <input type="number" min="1" value="${order.items[0].qty}" class="qty" /></label>
-          </div>
-          <pre class="log" style="display:none"></pre>
-        `;
-
-        const btnReorder = card.querySelector('.reorder');
-        const btnMutate  = card.querySelector('.mutate');
-        const btnInspect = card.querySelector('.inspect');
-        const noteInput  = card.querySelector('.note');
-        const qtyInput   = card.querySelector('.qty');
-        const log        = card.querySelector('.log');
-
-        // Keep a handle to the most recent clone for this source order (demo only)
-        let lastClone = null;
-
-        btnReorder.addEventListener('click', () => {
-          // Create a clone (Prototype) and allow initial overrides
-          const overrides = {
-            notes: noteInput.value || undefined
-          };
-          const clone = order.cloneForReorder(overrides);
-
-          // Optionally set first-item qty at clone time (to show independence)
-          const newQty = Math.max(1, parseInt(qtyInput.value || '1', 10));
-          if (clone.items[0]) clone.items[0].qty = newQty;
-
-          // Demonstrate independence: after clone, mutate clone—original must not change
-          const originalFirstQtyBefore = order.items[0]?.qty;
-          clone.items[0].qty = (clone.items[0].qty || 1); // ensure number
-          console.assert(
-            order.items[0]?.qty === originalFirstQtyBefore,
-            'Original should be unchanged after clone-time mutation'
-          );
-
-          // Add clone to top of list
-          orders.unshift(clone);
-          lastClone = clone;
-          render();
-        });
-
-        btnMutate.addEventListener('click', () => {
-          if (!lastClone) {
-            alert('Reorder first to create a clone for this card.');
-            return;
-          }
-          const original = orders.find(o => o.id === order.id); // still present
-          const originalQtyBefore = original.items[0]?.qty;
-
-          // Mutate CLONE only
-          lastClone.items[0].qty = (lastClone.items[0].qty || 1) + 1;
-
-          // Assert original not affected
-          console.assert(
-            original.items[0]?.qty === originalQtyBefore,
-            'Original order mutated — deep clone failed!'
-          );
-
-          // Log to UI
-          log.style.display = 'block';
-          log.textContent =
-`Mutated clone's first item qty +1
-Original first item qty: ${originalQtyBefore}
-Clone first item qty:    ${lastClone.items[0].qty}`;
-        });
-
-        btnInspect.addEventListener('click', () => {
-          log.style.display = log.style.display === 'none' ? 'block' : 'none';
-          log.textContent =
-`Original:
-${JSON.stringify(order, null, 2)}
-Last Clone (if any):
-${JSON.stringify(lastClone, null, 2)}`;
-        });
-
-        $orders.appendChild(card);
+    // Simple tab activation (visual only)
+    const tabs = document.querySelectorAll('.tab');
+    tabs.forEach(t => {
+      t.addEventListener('click', () => {
+        tabs.forEach(x => x.classList.remove('active'));
+        t.classList.add('active');
       });
-    }
-
-    render();
+    });
   </script>
 </body>
 </html>
