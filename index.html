@@ -1,0 +1,211 @@
+
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Food Delivery — Prototype Pattern (Reorder)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root { font-family: system-ui, Arial; color-scheme: light dark; }
+    body { margin: 24px; }
+    h1 { margin-bottom: 8px; }
+    .grid { display: grid; gap: 16px; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); }
+    .card { border: 1px solid #ddd; border-radius: 12px; padding: 16px; box-shadow: 0 6px 14px rgba(0,0,0,0.06); background: #fff; }
+    .row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; align-items: center; }
+    button { padding: 8px 12px; border-radius: 8px; border: 1px solid #ccc; cursor: pointer; background: #f8f8f8; }
+    .orders { margin-top: 20px; }
+    .pill { font-size: 12px; border-radius: 999px; padding: 2px 8px; border: 1px solid #ddd; }
+    pre { background: #f7f7f8; padding: 8px; border-radius: 8px; max-height: 180px; overflow: auto; }
+    .mutator { display: flex; gap: 8px; align-items: center; margin-top: 6px; }
+    input[type="number"] { width: 72px; padding: 6px 8px; border-radius: 6px; border: 1px solid #ccc; }
+    small { color: #666; }
+  </style>
+</head>
+<body>
+  <h1>Prototype Pattern — Reorder an Existing Food Order</h1>
+  <p><small>Click “Reorder” to <b>clone</b> an existing order. Edit the clone; the original remains unchanged.</small></p>
+
+  <div class="orders">
+    <h2>Orders</h2>
+    <div id="orders" class="grid"></div>
+  </div>
+
+  <script>
+    // --- 1) Deep clone utility (Prototype backbone)
+    function deepClone(obj) {
+      // Prefer structuredClone when available (preserves Dates, Maps, Sets)
+      if (typeof structuredClone === 'function') return structuredClone(obj);
+      return JSON.parse(JSON.stringify(obj)); // simple fallback
+    }
+
+    // --- 2) Order model with a clone method that resets appropriate fields
+    class FoodOrder {
+      constructor(data) { Object.assign(this, data); }
+
+      cloneForReorder(overrides = {}) {
+        const copy = new FoodOrder(deepClone(this));
+        copy.id = genId('ORD');                       // new identity
+        copy.status = 'PLACED';                       // reset lifecycle
+        copy.placedAt = new Date().toISOString();     // new timestamp
+        copy.driver = null;                           // clear assignment
+        copy.tracking = { etaMins: null, updates: [] };
+        // keep items, address, and payment by default (reorder convenience)
+        Object.assign(copy, overrides);               // allow tweaks at creation
+        return copy;
+      }
+    }
+
+    function genId(prefix) {
+      // Safe, non-crypto fallback id
+      const rnd = Math.random().toString(36).slice(2, 8).toUpperCase();
+      return `${prefix}-${Date.now().toString().slice(-6)}-${rnd}`;
+    }
+
+    // --- 3) Seed data (pretend these came from past orders)
+    const orders = [
+      new FoodOrder({
+        id: 'ORD-101',
+        userId: 'U1',
+        items: [
+          { id: 'M1', name: 'Paneer Tikka', qty: 1, price: 249 },
+          { id: 'M2', name: 'Butter Naan', qty: 2, price: 49 }
+        ],
+        address: { line1: '12 MG Road', city: 'Hyderabad', landmark: 'Metro Gate 3' },
+        payment: { method: 'UPI', last4: '1298' },
+        placedAt: '2025-11-08T12:15:00Z',
+        status: 'DELIVERED',
+        driver: { id: 'D7', name: 'Ravi' },
+        tracking: { etaMins: 0, updates: ['Delivered'] },
+        notes: 'Extra spicy'
+      }),
+      new FoodOrder({
+        id: 'ORD-102',
+        userId: 'U1',
+        items: [
+          { id: 'M9', name: 'Veg Biryani', qty: 1, price: 199 }
+        ],
+        address: { line1: '12 MG Road', city: 'Hyderabad', landmark: 'Metro Gate 3' },
+        payment: { method: 'CARD', last4: '5512' },
+        placedAt: '2025-11-09T19:45:12Z',
+        status: 'DELIVERED',
+        driver: { id: 'D3', name: 'Sanjay' },
+        tracking: { etaMins: 0, updates: ['Delivered'] },
+        notes: ''
+      })
+    ];
+
+    // --- 4) UI rendering
+    const $orders = document.getElementById('orders');
+
+    function currency(n) { return '₹' + n.toFixed(2); }
+    function total(order) {
+      return order.items.reduce((s, i) => s + i.qty * i.price, 0);
+    }
+
+    function render() {
+      $orders.innerHTML = '';
+      orders.forEach((order, idx) => {
+        const card = document.createElement('div');
+        card.className = 'card';
+
+        const itemsList = order.items.map(i => `${i.name} × ${i.qty}`).join(', ');
+        const statusPill = `<span class="pill">${order.status}</span>`;
+        const totalAmt = currency(total(order));
+
+        card.innerHTML = `
+          <h3>Order <code>${order.id}</code> ${statusPill}</h3>
+          <div><b>Items:</b> ${itemsList}</div>
+          <div><b>Address:</b> ${order.address.line1}, ${order.address.city}</div>
+          <div><b>Payment:</b> ${order.payment.method}${order.payment.last4 ? ' ••••'+order.payment.last4 : ''}</div>
+          <div><b>Total:</b> ${totalAmt}</div>
+          <div><b>Placed:</b> <small>${new Date(order.placedAt).toLocaleString()}</small></div>
+          <div class="row">
+            <button class="reorder">Reorder (Clone)</button>
+            <button class="mutate">Mutate Clone: +1 Qty First Item</button>
+            <button class="inspect">Inspect JSON</button>
+          </div>
+          <div class="mutator">
+            <label>Clone note: <input type="text" placeholder="e.g., Less oil" class="note" /></label>
+            <label>Qty for first item: <input type="number" min="1" value="${order.items[0].qty}" class="qty" /></label>
+          </div>
+          <pre class="log" style="display:none"></pre>
+        `;
+
+        const btnReorder = card.querySelector('.reorder');
+        const btnMutate  = card.querySelector('.mutate');
+        const btnInspect = card.querySelector('.inspect');
+        const noteInput  = card.querySelector('.note');
+        const qtyInput   = card.querySelector('.qty');
+        const log        = card.querySelector('.log');
+
+        // Keep a handle to the most recent clone for this source order (demo only)
+        let lastClone = null;
+
+        btnReorder.addEventListener('click', () => {
+          // Create a clone (Prototype) and allow initial overrides
+          const overrides = {
+            notes: noteInput.value || undefined
+          };
+          const clone = order.cloneForReorder(overrides);
+
+          // Optionally set first-item qty at clone time (to show independence)
+          const newQty = Math.max(1, parseInt(qtyInput.value || '1', 10));
+          if (clone.items[0]) clone.items[0].qty = newQty;
+
+          // Demonstrate independence: after clone, mutate clone—original must not change
+          const originalFirstQtyBefore = order.items[0]?.qty;
+          clone.items[0].qty = (clone.items[0].qty || 1); // ensure number
+          console.assert(
+            order.items[0]?.qty === originalFirstQtyBefore,
+            'Original should be unchanged after clone-time mutation'
+          );
+
+          // Add clone to top of list
+          orders.unshift(clone);
+          lastClone = clone;
+          render();
+        });
+
+        btnMutate.addEventListener('click', () => {
+          if (!lastClone) {
+            alert('Reorder first to create a clone for this card.');
+            return;
+          }
+          const original = orders.find(o => o.id === order.id); // still present
+          const originalQtyBefore = original.items[0]?.qty;
+
+          // Mutate CLONE only
+          lastClone.items[0].qty = (lastClone.items[0].qty || 1) + 1;
+
+          // Assert original not affected
+          console.assert(
+            original.items[0]?.qty === originalQtyBefore,
+            'Original order mutated — deep clone failed!'
+          );
+
+          // Log to UI
+          log.style.display = 'block';
+          log.textContent =
+`Mutated clone's first item qty +1
+Original first item qty: ${originalQtyBefore}
+Clone first item qty:    ${lastClone.items[0].qty}`;
+        });
+
+        btnInspect.addEventListener('click', () => {
+          log.style.display = log.style.display === 'none' ? 'block' : 'none';
+          log.textContent =
+`Original:
+${JSON.stringify(order, null, 2)}
+Last Clone (if any):
+${JSON.stringify(lastClone, null, 2)}`;
+        });
+
+        $orders.appendChild(card);
+      });
+    }
+
+    render();
+  </script>
+</body>
+</html>
+
